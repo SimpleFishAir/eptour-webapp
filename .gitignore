@@ -1,0 +1,4 @@
+# Trip data and secrets never go in this public repo
+sample/
+.env
+*.local.json
