@@ -24,6 +24,7 @@
   label { display: block; margin-top: 18px; font-weight: 600; }
   input { width: 100%; padding: 10px 12px; font-size: 16px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: inherit; }
   button { margin-top: 22px; width: 100%; padding: 12px; font-size: 16px; font-weight: 600; border: 0; border-radius: 8px; background: var(--accent); color: var(--on-accent); }
+  button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
   button:disabled { opacity: 0.6; }
   .hint { color: var(--muted); font-size: 14px; margin: 4px 0 0; }
   #result { margin-top: 24px; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--line); white-space: pre-wrap; display: none; }
@@ -35,15 +36,18 @@
 <body>
 <main>
   <h1>Baserow access check</h1>
-  <p class="hint">Checks that this page can read your Baserow table directly from the browser. The token is used for this one request, then cleared. It is not saved anywhere.</p>
+  <p class="hint">Checks that this page can read your Baserow tables directly from the browser. The token is used for one request, then cleared. It is not saved anywhere.</p>
 
   <form id="check" autocomplete="off">
-    <label for="table">Table ID</label>
-    <input id="table" inputmode="numeric" pattern="[0-9]+" required>
-    <p class="hint">The number after /table/ in the table's web address in Baserow.</p>
-
     <label for="token">Read-only database token</label>
     <input id="token" type="password" required autocomplete="off" spellcheck="false" autocapitalize="off">
+
+    <button id="find" type="button" class="secondary">Find my tables</button>
+    <p class="hint">Only needs the token. Lists the tables your token can see, with their IDs.</p>
+
+    <label for="table">Table ID</label>
+    <input id="table" inputmode="numeric" pattern="[0-9]+">
+    <p class="hint">The number after /table/ in the table's web address in Baserow.</p>
 
     <button id="go" type="submit">Check access</button>
   </form>
@@ -73,6 +77,62 @@
       }
       return '';
     }
+
+    var findBtn = document.getElementById('find');
+
+    findBtn.addEventListener('click', async function () {
+      var token = tokenInput.value.trim();
+      if (!token) {
+        show('Paste your token first.', 'bad');
+        return;
+      }
+
+      findBtn.disabled = true;
+      button.disabled = true;
+      show('Looking for your tables…', 'wait');
+
+      var res;
+      try {
+        res = await fetch(API + '/api/database/tables/all-tables/', {
+          method: 'GET',
+          headers: { 'Authorization': 'Token ' + token },
+          credentials: 'omit',
+          cache: 'no-store',
+          referrerPolicy: 'no-referrer'
+        });
+      } catch (err) {
+        show('Blocked: the browser could not reach Baserow from this page.\n\nCheck you are online and try once more. If it still fails, tell Claude "lookup blocked".', 'bad');
+        return;
+      } finally {
+        token = '';
+        tokenInput.value = '';
+        findBtn.disabled = false;
+        button.disabled = false;
+      }
+
+      var body = null;
+      try { body = await res.json(); } catch (ignore) { body = null; }
+
+      if (res.status === 401 || res.status === 403) {
+        show('Baserow refused to list tables with this token' + errorCode(body) + '.\n\nSo the lookup does not work with a read-only token, and the app will ask for the table IDs instead. Tell Claude "lookup refused".', 'bad');
+        return;
+      }
+      if (!res.ok || !Array.isArray(body)) {
+        show('Baserow returned an error (' + res.status + ')' + errorCode(body) + '.\n\nTell Claude the number in brackets.', 'bad');
+        return;
+      }
+      if (!body.length) {
+        show('Baserow answered, but your token cannot see any tables. Tell Claude "lookup found no tables".', 'bad');
+        return;
+      }
+
+      var lines = body.slice(0, 50).map(function (t) {
+        var name = (t && typeof t.name === 'string') ? t.name.slice(0, 100) : '(no name)';
+        var id = (t && Number.isInteger(t.id)) ? t.id : '?';
+        return name + ' (ID ' + id + ')';
+      });
+      show('Lookup works. Your token can see ' + body.length + (body.length === 1 ? ' table' : ' tables') + ':\n\n' + lines.join('\n') + '\n\nTell Claude "lookup works", and whether Places and Journey are both listed.', 'ok');
+    });
 
     form.addEventListener('submit', async function (e) {
       e.preventDefault();
