@@ -1,0 +1,8 @@
+package: maplibre-gl
+version: 6.16.0
+archive_integrity: sha512-gApO66EMtoDZuio680RUBvskR7ahFd/NNhLN4tBAs+Y7FeT4gQV8zVFgYVMRmFxQznOEzecW19w6xOd9XjZjiA==
+library: maplibre-gl.mjs
+style: maplibre-gl.css
+maplibre-gl.mjs sha256=fbbdf8ddd9a48e49059a4be6795a4f214a711314bb5809f72d3730b48e7897e3 sha384=sha384-uLwQnFL74rrONqIWx/ubL4wcAtA2h08tbMDZd9U4KbQ7GhaA7S1XKepHU89UkU7C bytes=1108049
+maplibre-gl.css sha256=a90798a1953017790e590f7e1bd35ff103a8a4263972cb47290b78adf86f8c20 sha384=sha384-S+OnE5M4U3Qc2nR0RgljGrVs06xqfRg8L7uFk/pOF5+sRuSDG4oKkqKZmFrx7w09 bytes=71596
+LICENSE-maplibre-gl.txt sha256=ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2 sha384=sha384-3Zf/f+K0L6bn+JFiUedpEU79XsEmWDOSzj/+j17JomfRWmlkO60ByjZbpgZkeRiL bytes=5984
