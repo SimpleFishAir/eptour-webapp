@@ -1,8 +1,9 @@
 # Fetches the MapLibre map library from the official npm registry,
-# checks it against the registry's published fingerprint, and hands back
-# the browser library, its style file and the licence as a download.
+# checks it against the registry's published fingerprint, and commits
+# the browser library, its style file, the licence and a fingerprint
+# record to vendor/ on the vendor-maplibre branch (never dev or main).
 # File locations are read from the package's own package.json.
-# It cannot change the repo. Started only by hand.
+# Started only by hand. BL reviews and merges the branch into dev.
 name: Vendor MapLibre
 
 on:
@@ -14,14 +15,21 @@ on:
         default: "latest"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   vendor:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
+      - name: Check out dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          path: repo
+
       - name: Fetch and check maplibre-gl
+        id: fetch
         env:
           REQUESTED: ${{ inputs.version }}
           REGISTRY: https://registry.npmjs.org/
@@ -31,8 +39,10 @@ jobs:
 
           [[ "$REQUESTED" =~ ^(latest|[0-9]+\.[0-9]+\.[0-9]+)$ ]] || fail "version must be 'latest' or an exact version such as 5.6.0"
 
-          mkdir -p work out
-          cd work
+          WORK="$RUNNER_TEMP/work"
+          OUT="$RUNNER_TEMP/out"
+          mkdir -p "$WORK" "$OUT"
+          cd "$WORK"
 
           VERSION="$(npm view "maplibre-gl@${REQUESTED}" version --registry="$REGISTRY" 2>/dev/null)" || fail "could not look up the version"
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "could not resolve a single exact version"
@@ -78,10 +88,10 @@ jobs:
 
           JS_NAME="$(basename "$JS_PATH")"
           CSS_NAME="$(basename "$CSS_PATH")"
-          cp "package/$JS_PATH" "../out/$JS_NAME" || fail "could not copy the library"
-          cp "package/$CSS_PATH" "../out/$CSS_NAME" || fail "could not copy the style file"
-          cp "$LICENCE_FILE" ../out/LICENSE.txt || fail "could not copy the licence"
-          cd ../out
+          cp "package/$JS_PATH" "$OUT/$JS_NAME" || fail "could not copy the library"
+          cp "package/$CSS_PATH" "$OUT/$CSS_NAME" || fail "could not copy the style file"
+          cp "$LICENCE_FILE" "$OUT/LICENSE-maplibre-gl.txt" || fail "could not copy the licence"
+          cd "$OUT"
 
           {
             echo "package: maplibre-gl"
@@ -89,21 +99,49 @@ jobs:
             echo "archive_integrity: ${INTEGRITY}"
             echo "library: ${JS_NAME}"
             echo "style: ${CSS_NAME}"
-            for f in "$JS_NAME" "$CSS_NAME" LICENSE.txt; do
+            for f in "$JS_NAME" "$CSS_NAME" LICENSE-maplibre-gl.txt; do
               echo "${f} sha256=$(sha256sum "$f" | cut -d' ' -f1) sha384=sha384-$(openssl dgst -sha384 -binary "$f" | base64 -w0) bytes=$(stat -c %s "$f")"
             done
-          } > CHECKSUMS.txt || fail "could not write CHECKSUMS.txt"
+          } > CHECKSUMS-maplibre-gl.txt || fail "could not write the fingerprint record"
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "integrity=${INTEGRITY}" >> "$GITHUB_OUTPUT"
 
           echo "Version: ${VERSION}"
           echo "Archive fingerprint matches the registry: ${INTEGRITY}"
           echo "Library: ${JS_NAME}"
           echo "Style: ${CSS_NAME}"
-          tail -n 3 CHECKSUMS.txt
+          tail -n 3 CHECKSUMS-maplibre-gl.txt
 
-      - name: Hand back the files
-        uses: actions/upload-artifact@v4
-        with:
-          name: maplibre-gl
-          path: out/
-          retention-days: 3
-          if-no-files-found: error
+      - name: Commit to the vendor-maplibre branch
+        working-directory: repo
+        env:
+          BRANCH: vendor-maplibre
+          VERSION: ${{ steps.fetch.outputs.version }}
+          INTEGRITY: ${{ steps.fetch.outputs.integrity }}
+        run: |
+          set -euo pipefail
+          fail() { echo "ERROR: $1"; exit 1; }
+
+          [ "$BRANCH" = "vendor-maplibre" ] || fail "unexpected branch name"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "missing version from the previous step"
+
+          git switch -q -C "$BRANCH" || fail "could not start the branch"
+          mkdir -p vendor
+          rm -f vendor/maplibre-gl.* vendor/LICENSE-maplibre-gl.txt vendor/CHECKSUMS-maplibre-gl.txt
+          cp "$RUNNER_TEMP/out/"* vendor/ || fail "could not place the files in vendor/"
+          git add vendor || fail "could not stage the files"
+
+          if git diff --cached --quiet; then
+            echo "dev already has these exact files; nothing to commit"
+            exit 0
+          fi
+
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -m "Add MapLibre ${VERSION} to vendor/" \
+              -m "Fetched from the official npm registry and checked against its published fingerprint (${INTEGRITY})." \
+            || fail "could not commit"
+
+          git push -q --force origin "HEAD:refs/heads/${BRANCH}" || fail "could not push the branch"
+          echo "Pushed MapLibre ${VERSION} to the ${BRANCH} branch"
