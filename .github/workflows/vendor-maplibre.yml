@@ -1,0 +1,92 @@
+# Fetches the MapLibre map library from the official npm registry,
+# checks it against the registry's published fingerprint, and hands back
+# three files (maplibre-gl.js, maplibre-gl.css and the licence) as a
+# download. It cannot change the repo. Started only by hand.
+name: Vendor MapLibre
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "maplibre-gl version: 'latest' or an exact version such as 5.6.0"
+        required: true
+        default: "latest"
+
+permissions:
+  contents: read
+
+jobs:
+  vendor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Fetch and check maplibre-gl
+        env:
+          REQUESTED: ${{ inputs.version }}
+          REGISTRY: https://registry.npmjs.org/
+        run: |
+          set -euo pipefail
+
+          if ! [[ "$REQUESTED" =~ ^(latest|[0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "ERROR: version must be 'latest' or an exact version such as 5.6.0"
+            exit 1
+          fi
+
+          mkdir -p work out
+          cd work
+
+          VERSION="$(npm view "maplibre-gl@${REQUESTED}" version --registry="$REGISTRY" 2>/dev/null)"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: could not resolve a single exact version"
+            exit 1
+          fi
+          INTEGRITY="$(npm view "maplibre-gl@${VERSION}" dist.integrity --registry="$REGISTRY" 2>/dev/null)"
+          if ! [[ "$INTEGRITY" =~ ^sha512-[A-Za-z0-9+/=]+$ ]]; then
+            echo "ERROR: registry did not publish a sha512 fingerprint"
+            exit 1
+          fi
+
+          if ! npm pack "maplibre-gl@${VERSION}" --ignore-scripts --registry="$REGISTRY" >/dev/null 2>&1; then
+            echo "ERROR: download failed"
+            exit 1
+          fi
+          TARBALL="maplibre-gl-${VERSION}.tgz"
+
+          ACTUAL="sha512-$(openssl dgst -sha512 -binary "$TARBALL" | base64 -w0)"
+          if [ "$ACTUAL" != "$INTEGRITY" ]; then
+            echo "ERROR: archive fingerprint does not match the registry"
+            exit 1
+          fi
+
+          tar -xzf "$TARBALL" package/dist/maplibre-gl.js package/dist/maplibre-gl.css
+          tar -xzf "$TARBALL" --wildcards 'package/LICENSE*' 2>/dev/null || true
+          LICENCE_FILE="$(ls package/LICENSE* 2>/dev/null | head -1 || true)"
+          if [ -z "$LICENCE_FILE" ]; then
+            echo "ERROR: licence file not found in the package"
+            exit 1
+          fi
+
+          cp package/dist/maplibre-gl.js package/dist/maplibre-gl.css ../out/
+          cp "$LICENCE_FILE" ../out/LICENSE.txt
+          cd ../out
+
+          {
+            echo "package: maplibre-gl"
+            echo "version: ${VERSION}"
+            echo "archive_integrity: ${INTEGRITY}"
+            for f in maplibre-gl.js maplibre-gl.css LICENSE.txt; do
+              echo "${f} sha256=$(sha256sum "$f" | cut -d' ' -f1) sha384=sha384-$(openssl dgst -sha384 -binary "$f" | base64 -w0) bytes=$(stat -c %s "$f")"
+            done
+          } > CHECKSUMS.txt
+
+          echo "Version: ${VERSION}"
+          echo "Archive fingerprint matches the registry: ${INTEGRITY}"
+          cat CHECKSUMS.txt | tail -n 3
+
+      - name: Hand back the files
+        uses: actions/upload-artifact@v4
+        with:
+          name: maplibre-gl
+          path: out/
+          retention-days: 3
+          if-no-files-found: error
