@@ -8,9 +8,11 @@
 #   commit  runs the check again, then commits to the basemap branch only,
 #           using GitHub's built-in temporary key. No other secrets are used.
 #
-# Sources are fixed below. On the first run they are empty: the newest
-# Natural Earth release and the relief download's fingerprint are used and
-# recorded in map/MANIFEST-basemap.txt, then fixed here.
+# Sources are fixed below, from the first run on 8 Nov 2026 (recorded in
+# map/MANIFEST-basemap.txt): Natural Earth release v5.1.2 by its exact
+# commit, and the relief download by its fingerprint. A run fails if
+# either differs. To move to newer data, change them deliberately (empty
+# values mean: use the newest release and accept the download as it is).
 # Started only by hand. BL reviews and merges the branch into dev.
 # Logs show fixed messages and counts only.
 name: Build Base Map
@@ -23,9 +25,9 @@ permissions:
 
 env:
   NE_VECTOR_REPO: https://github.com/nvkelso/natural-earth-vector
-  NE_VECTOR_COMMIT: ""
+  NE_VECTOR_COMMIT: "f1890d9f152c896d250a77557a5751a93d494776"
   RELIEF_URL: https://naciscdn.org/naturalearth/10m/raster/SR_HR.zip
-  RELIEF_SHA256: ""
+  RELIEF_SHA256: "b2619fff2fc73c17152983c066adfaa25c4b626916b822bad2fae8bcd9be41a5"
   PILLOW_VERSION: "12.3.0"
 
 jobs:

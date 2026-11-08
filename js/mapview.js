@@ -23,17 +23,13 @@ const RELIEF_FILE = /^relief-\d-\d\.jpg$/;
 
 const mapUrl = file => new URL('map/' + file, document.baseURI).href;
 
+// All journeys are solid lines, coloured by type.
 const COLOURS = {
-  train: '#1D9E75',
-  ferry: '#378ADD',
+  train: '#40004b',
+  ferry: '#00441b',
   sleeper: '#7F77DD',
-  flight: '#D85A30',
-  car: '#BA7517'
-};
-const DASHES = {
-  ferry: [2, 2],
-  sleeper: [0.5, 2],
-  car: [4, 2, 1, 2]
+  flight: '#543005',
+  car: '#053061'
 };
 
 function palette() {
@@ -178,18 +174,16 @@ export function createMap(container, handlers) {
     map.addSource('journeys', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
     map.addSource('stations', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
     for (const mode of Object.keys(COLOURS)) {
-      const paint = {
-        'line-color': ['case', ['get', 'past'], colours.past, COLOURS[mode]],
-        'line-width': ['case', ['get', 'today'], 4.5, 2.5]
-      };
-      if (DASHES[mode]) paint['line-dasharray'] = DASHES[mode];
       map.addLayer({
         id: 'j-' + mode,
         type: 'line',
         source: 'journeys',
         filter: ['==', ['get', 'mode'], mode],
-        layout: { 'line-cap': mode === 'sleeper' ? 'round' : 'butt', 'line-join': 'round' },
-        paint
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': ['case', ['get', 'past'], colours.past, COLOURS[mode]],
+          'line-width': ['case', ['get', 'today'], 4.5, 2.5]
+        }
       });
     }
     map.addLayer({
