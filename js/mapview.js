@@ -34,10 +34,14 @@ const COLOURS = {
 const LINE_WIDTH = 5;
 const LINE_OPACITY = 0.6;
 
-// Station dots, with the days at their place in the centre.
+// Station dots. Places with a stay get a bigger dot with the days in the
+// centre; transit places and the trip's start and end keep the original
+// small, empty dot. Labels sit clear of the dot either way.
 const DOT_RADIUS = 9;
+const DOT_RADIUS_EMPTY = 4.5;
 const DOT_RING = 2;
-const LABEL_GAP = DOT_RADIUS + DOT_RING + 2; // labels sit clear of the dot
+const GAP_BIG = { place: DOT_RADIUS + DOT_RING + 2, station: DOT_RADIUS + DOT_RING + 2 };
+const GAP_EMPTY = { place: 8, station: 7 };
 
 const MAP_COLOURS = {
   bg: '#eef1f0', dot: '#2c2c2a', ring: '#ffffff',
@@ -190,7 +194,7 @@ export function createMap(container, handlers) {
       type: 'circle',
       source: 'stations',
       paint: {
-        'circle-radius': DOT_RADIUS,
+        'circle-radius': ['case', ['>', ['get', 'days'], 0], DOT_RADIUS, DOT_RADIUS_EMPTY],
         'circle-color': colours.dot,
         'circle-stroke-width': DOT_RING,
         'circle-stroke-color': colours.ring
@@ -232,8 +236,8 @@ export function createMap(container, handlers) {
         const w = l.text.length * (l.kind === 'place' ? 7.5 : 6.5) + 6;
         const h = 16;
         const box = l.kind === 'place'
-          ? { x1: pt.x - w / 2, x2: pt.x + w / 2, y1: pt.y - LABEL_GAP - h, y2: pt.y - LABEL_GAP }
-          : { x1: pt.x - w / 2, x2: pt.x + w / 2, y1: pt.y + LABEL_GAP, y2: pt.y + LABEL_GAP + h };
+          ? { x1: pt.x - w / 2, x2: pt.x + w / 2, y1: pt.y - l.gap - h, y2: pt.y - l.gap }
+          : { x1: pt.x - w / 2, x2: pt.x + w / 2, y1: pt.y + l.gap, y2: pt.y + l.gap + h };
         const onScreen = box.x2 > 0 && box.x1 < W && box.y2 > 0 && box.y1 < H;
         const clash = placed.some(b => box.x1 < b.x2 && box.x2 > b.x1 && box.y1 < b.y2 && box.y2 > b.y1);
         if (onScreen && !clash) { placed.push(box); show = true; }
@@ -260,9 +264,10 @@ export function createMap(container, handlers) {
         geometry: { type: 'LineString', coordinates: j.mode === 'flight' ? arc(A, B) : [A, B] }
       };
     });
+    const daysAt = s => days.get(s.place) || 0;
     const dotFeatures = [...used].map(name => {
       const s = stations.get(name);
-      return { type: 'Feature', properties: { station: name }, geometry: { type: 'Point', coordinates: [s.lon, s.lat] } };
+      return { type: 'Feature', properties: { station: name, days: daysAt(s) }, geometry: { type: 'Point', coordinates: [s.lon, s.lat] } };
     });
     map.getSource('journeys').setData({ type: 'FeatureCollection', features: lineFeatures });
     map.getSource('stations').setData({ type: 'FeatureCollection', features: dotFeatures });
@@ -281,11 +286,11 @@ export function createMap(container, handlers) {
     for (const [name, p] of placeList) {
       const lon = p.stations.reduce((t, s) => t + s.lon, 0) / p.stations.length;
       const lat = p.stations.reduce((t, s) => t + s.lat, 0) / p.stations.length;
-      addLabel('place', name, [lon, lat]);
+      addLabel('place', name, [lon, lat], daysAt(p.stations[0]) > 0);
     }
     for (const name of used) {
       const s = stations.get(name);
-      addLabel('station', s.station, [s.lon, s.lat]);
+      addLabel('station', s.station, [s.lon, s.lat], daysAt(s) > 0);
     }
 
     // Days at the place, in the centre of each of its station dots. Places
@@ -304,14 +309,15 @@ export function createMap(container, handlers) {
     layoutLabels();
   }
 
-  function addLabel(kind, text, lngLat) {
+  function addLabel(kind, text, lngLat, bigDot) {
     const el = labelEl(text, kind === 'place' ? 'lbl-place' : 'lbl-station');
+    const gap = (bigDot ? GAP_BIG : GAP_EMPTY)[kind];
     const marker = new maplibregl.Marker({
       element: el,
       anchor: kind === 'place' ? 'bottom' : 'top',
-      offset: kind === 'place' ? [0, -LABEL_GAP] : [0, LABEL_GAP]
+      offset: kind === 'place' ? [0, -gap] : [0, gap]
     }).setLngLat(lngLat).addTo(map);
-    labels.push({ kind, text, lngLat, el, marker });
+    labels.push({ kind, text, lngLat, el, marker, gap });
   }
 
   function fit(points, bottomPad) {
