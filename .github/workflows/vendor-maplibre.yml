@@ -3,6 +3,9 @@
 # the browser library, its style file, the licence and a fingerprint
 # record to vendor/ on the vendor-maplibre branch (never dev or main).
 # File locations are read from the package's own package.json.
+# The fingerprint record also lists the names and sizes of the files in
+# the package's dist/ folder, so companion files can be identified
+# without opening the library. Names with unusual characters are not shown.
 # Started only by hand. BL reviews and merges the branch into dev.
 name: Vendor MapLibre
 
@@ -86,6 +89,28 @@ jobs:
           LICENCE_FILE="$(ls package/LICENSE* 2>/dev/null | head -1 || true)"
           [ -n "$LICENCE_FILE" ] || fail "licence file not found in the package"
 
+          # Names and sizes of the files in dist/, for the fingerprint record.
+          # Only names made of letters, digits, dots, dashes, underscores and
+          # slashes are shown; others are counted but not shown.
+          MEMBERS="$(tar -tzf "$TARBALL")" || fail "could not list the package"
+          LISTING="$WORK/dist-listing.txt"
+          : > "$LISTING"
+          HIDDEN=0
+          while IFS= read -r m; do
+            case "$m" in package/dist/*) ;; *) continue ;; esac
+            n="${m#package/dist/}"
+            [ -n "$n" ] || continue
+            case "$n" in */) continue ;; esac
+            if [[ "$n" =~ ^[A-Za-z0-9._/-]{1,120}$ ]] && [[ "$n" != *..* ]]; then
+              SIZE="$(tar -xOzf "$TARBALL" "$m" | wc -c)" || fail "could not read a file size"
+              echo "  dist/${n} bytes=${SIZE}" >> "$LISTING"
+            else
+              HIDDEN=$((HIDDEN + 1))
+            fi
+          done <<< "$MEMBERS"
+          sort -o "$LISTING" "$LISTING"
+          [ "$HIDDEN" -eq 0 ] || echo "  ${HIDDEN} file(s) with unusual names not shown" >> "$LISTING"
+
           JS_NAME="$(basename "$JS_PATH")"
           CSS_NAME="$(basename "$CSS_PATH")"
           cp "package/$JS_PATH" "$OUT/$JS_NAME" || fail "could not copy the library"
@@ -102,6 +127,8 @@ jobs:
             for f in "$JS_NAME" "$CSS_NAME" LICENSE-maplibre-gl.txt; do
               echo "${f} sha256=$(sha256sum "$f" | cut -d' ' -f1) sha384=sha384-$(openssl dgst -sha384 -binary "$f" | base64 -w0) bytes=$(stat -c %s "$f")"
             done
+            echo "dist files in the package (names and sizes only; only the files above are kept):"
+            cat "$LISTING"
           } > CHECKSUMS-maplibre-gl.txt || fail "could not write the fingerprint record"
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
@@ -111,7 +138,7 @@ jobs:
           echo "Archive fingerprint matches the registry: ${INTEGRITY}"
           echo "Library: ${JS_NAME}"
           echo "Style: ${CSS_NAME}"
-          tail -n 3 CHECKSUMS-maplibre-gl.txt
+          grep ' sha256=' CHECKSUMS-maplibre-gl.txt
 
       - name: Commit to the vendor-maplibre branch
         working-directory: repo
