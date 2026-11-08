@@ -1,0 +1,23 @@
+basemap manifest
+natural_earth_vector_tag: v5.1.2
+natural_earth_vector_commit: f1890d9f152c896d250a77557a5751a93d494776
+relief_source_sha256: b2619fff2fc73c17152983c066adfaa25c4b626916b822bad2fae8bcd9be41a5
+relief_source_pixels: 21600x10800
+pillow: 12.3.0
+area: -12,34,45,72
+decimals: 4
+tolerance: 0.001
+file land.json features=9 bytes=1065046 sha256=9303ab4cc540a86b54502273632c9c14df98db468a12c58a8b1804375620e0cb
+file ocean.json features=1 bytes=1062096 sha256=955f6227c794c8505afe76fc619b10bf620a5c0c57385cf12fb29534e1744b3f
+file lakes.json features=916 bytes=717811 sha256=5a57468b2620dcb9e1887302868f8db1a4eb46dd93657b5fc8e8eb1f730d27de
+file rivers.json features=1129 bytes=1284608 sha256=0819c393ae570fee4baa9f2821537f36b8938ff6ef4d9f87751d601c5767e700
+file borders.json features=148 bytes=282216 sha256=a0c5a090cd140940c2fea9b5021477fd786cc5ba45e822fc84c2ca516cd19f28
+file relief-0-0.jpg width=1710 height=1388 bytes=55503 sha256=33afa5c8a444f082940c46e89953da2ab5fe45a1fe9f712a8e9fc97595848a9a
+file relief-0-1.jpg width=1710 height=1388 bytes=171231 sha256=a1473e4331e1a0f6939690748c0a6287c5d1b9301d26a456fc9a77141b80c8a0
+file relief-1-0.jpg width=1710 height=1387 bytes=167029 sha256=c8247a025cd38230c2f251f0d8fb799ab55adbb59fd044789ec0d202887a1f14
+file relief-1-1.jpg width=1710 height=1387 bytes=152811 sha256=0dc00bb591f6733010d2588e107a579cd07e7916426452b92bbd10f135c7907c
+file relief-2-0.jpg width=1710 height=1388 bytes=272761 sha256=94d62519162f7da6fe263e9121c0fbe7a0ecbd3dd7bbc0c49c52f348bb88c6dd
+file relief-2-1.jpg width=1710 height=1388 bytes=325780 sha256=9175aca1365bf54df72072750d6a53acc0ea4ca442a7cfcf97124c9e42356dc0
+file index.json bytes=668 sha256=0ca0efa6cd6205ec5ceed3ee80b62ea00e0f4b3be491474364b45c73f81217dc
+relief_pixels: 3420x4163 pieces=3x2
+total_bytes: 5557560
