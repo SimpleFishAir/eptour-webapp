@@ -47,7 +47,7 @@ Do not run commands that make git fetch missing files, such as `git cat-file` on
 ## Files
 
 - `index.html`: page, security policy, import map
-- `css/app.css`: styles, light and dark
+- `css/app.css`: styles (light only; no dark mode)
 - `js/app.js`: setup, loading, journey list, tap cards, menu
 - `js/baserow.js`: read-only Baserow access (table lookup, rows)
 - `js/data.js`: parsing and checking rows, time zones, formatting
@@ -91,7 +91,7 @@ If the arrival is not after the departure (after time zones are applied), it is 
 ## Map behaviour
 
 - Base map layers, bottom to top: land, relief (semi-transparent), sea, lakes, rivers (smaller ones appear as you zoom in), country borders. Then the journeys and stations. Panning is limited to the map area; zoom 3 to 11. If `map/` is missing, the plain background shows.
-- Journeys are solid lines, coloured by type: train `#40004b`, ferry `#00441b`, flight `#543005` (a gentle arc), car `#053061`. All are straight except flights. Done journeys are grey; today's are thicker.
+- Journeys are solid lines, coloured by type: train `#40004b`, ferry `#00441b`, flight `#543005` (a gentle arc), car `#053061`. All are straight except flights, and all are the same width. Every journey always shows its own colour: there is no greying of finished journeys and no highlighting of today's.
 - Labels are drawn by the browser (no font files): place names when zoomed out, station names as well from zoom 9. Overlapping labels are hidden.
 - Tapping a station or a line opens a card. The journey list opens from the top bar.
 

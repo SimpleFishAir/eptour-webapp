@@ -31,20 +31,11 @@ const COLOURS = {
   car: '#053061'
 };
 
-function palette() {
-  const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  return dark
-    ? {
-        bg: '#1f2023', dot: '#ecebe6', ring: '#1f2023', past: '#6b6b66',
-        land: '#2c2d2a', sea: '#17222d', river: '#2c4a63', border: '#5d5b55',
-        reliefOpacity: 0.5, reliefMax: 0.45
-      }
-    : {
-        bg: '#eef1f0', dot: '#2c2c2a', ring: '#ffffff', past: '#a9a8a2',
-        land: '#f3f0e8', sea: '#cddff0', river: '#9fc4e0', border: '#a8a39a',
-        reliefOpacity: 0.45, reliefMax: 1
-      };
-}
+const MAP_COLOURS = {
+  bg: '#eef1f0', dot: '#2c2c2a', ring: '#ffffff',
+  land: '#f3f0e8', sea: '#cddff0', river: '#9fc4e0', border: '#a8a39a',
+  reliefOpacity: 0.45
+};
 
 function isCorners(c) {
   return Array.isArray(c) && c.length === 4 && c.every(p =>
@@ -77,7 +68,7 @@ function labelEl(text, cls) {
 }
 
 export function createMap(container, handlers) {
-  const colours = palette();
+  const colours = MAP_COLOURS;
   const map = new maplibregl.Map({
     container,
     style: {
@@ -159,7 +150,6 @@ export function createMap(container, handlers) {
             source: id,
             paint: {
               'raster-opacity': colours.reliefOpacity,
-              'raster-brightness-max': colours.reliefMax,
               'raster-fade-duration': 0
             }
           }, 'map-ocean');
@@ -180,8 +170,8 @@ export function createMap(container, handlers) {
         filter: ['==', ['get', 'mode'], mode],
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
-          'line-color': ['case', ['get', 'past'], colours.past, COLOURS[mode]],
-          'line-width': ['case', ['get', 'today'], 4.5, 2.5]
+          'line-color': COLOURS[mode],
+          'line-width': 2.5
         }
       });
     }
@@ -256,7 +246,7 @@ export function createMap(container, handlers) {
       const B = [b.lon, b.lat];
       return {
         type: 'Feature',
-        properties: { id: j.id, mode: j.mode, past: j.past, today: j.today },
+        properties: { id: j.id, mode: j.mode },
         geometry: { type: 'LineString', coordinates: j.mode === 'flight' ? arc(A, B) : [A, B] }
       };
     });

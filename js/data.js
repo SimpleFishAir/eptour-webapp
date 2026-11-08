@@ -57,11 +57,6 @@ export function zonedToUtc(year, month, day, hour, minute, tz) {
   return t;
 }
 
-export function localDayKey(utcMs, tz) {
-  const p = localParts(utcMs, tz);
-  return `${p.day}-${p.month}`;
-}
-
 export function fmtDate(dateText) {
   const m = /^(\d{2})-(\d{2})$/.exec(dateText);
   if (!m) return dateText;
@@ -112,7 +107,7 @@ export function parsePlaces(rows) {
   return { stations, problems };
 }
 
-export function parseJourneys(rows, stations, now = Date.now()) {
+export function parseJourneys(rows, stations) {
   const journeys = [];
   const problems = [];
   rows.forEach((r, i) => {
@@ -147,9 +142,7 @@ export function parseJourneys(rows, stations, now = Date.now()) {
       dep, arr, date,
       num: val(r.num),
       company: val(r.company),
-      depUtc, arrUtc,
-      past: arrUtc < now,
-      today: localDayKey(now, a.tz) === date
+      depUtc, arrUtc
     });
   });
   journeys.sort((x, y) => x.depUtc - y.depUtc);

@@ -1,14 +1,7 @@
 :root {
   --bg: #ffffff; --fg: #1d1d1b; --muted: #6b6b66; --line: #d9d8d2;
   --panel: #ffffff; --accent: #2b5fab; --on-accent: #ffffff;
-  --halo: #ffffff; --past: #a9a8a2; --today: #e8f1fb; --warn-bg: #fdf3dc; --warn-fg: #6b4a07;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #161615; --fg: #ecebe6; --muted: #a3a29c; --line: #3a3a37;
-    --panel: #232321; --accent: #8db4ef; --on-accent: #10233f;
-    --halo: #1f2023; --past: #77766f; --today: #1d2c40; --warn-bg: #3a2f14; --warn-fg: #f2d79a;
-  }
+  --halo: #ffffff; --warn-bg: #fdf3dc; --warn-fg: #6b4a07;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
@@ -82,8 +75,6 @@ input { width: 100%; padding: 10px 12px; font-size: 16px; border: 1px solid var(
 .row .when { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; }
 .row .what { font-weight: 500; }
 .row .meta { grid-column: 2; }
-.row.past .what, .row.past .when { color: var(--past); }
-.row.today { background: var(--today); }
 
 /* map labels, drawn by the browser */
 .lbl {

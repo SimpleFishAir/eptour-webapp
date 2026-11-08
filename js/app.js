@@ -197,7 +197,6 @@ function showStationCard(name) {
       el('span', 'what', leaving ? `To ${j.to}` : `From ${j.from}`),
       el('span', 'meta', modeLine(j))
     );
-    if (j.past) btn.classList.add('past');
     btn.addEventListener('click', () => showJourneyCard(j.id, true));
     li.append(btn);
     list.append(li);
@@ -212,7 +211,7 @@ function showJourneyCard(id, zoom) {
   const items = [
     el('h3', '', `${j.from} → ${j.to}`),
     el('p', 'sub', `${fmtDate(j.date)}, ${fmtTime(j.dep)} to ${fmtTime(j.arr)}${fmtDuration(j.arrUtc - j.depUtc) ? ` (${fmtDuration(j.arrUtc - j.depUtc)})` : ''}`),
-    el('p', 'meta', modeLine(j) + (j.past ? ' · Done' : ''))
+    el('p', 'meta', modeLine(j))
   ];
   openCard(items);
   if (zoom) map.focusJourney(id, $('card').offsetHeight + 20);
@@ -243,8 +242,6 @@ function renderList() {
       el('span', 'what', `${j.from} → ${j.to}`),
       el('span', 'meta', modeLine(j))
     );
-    if (j.past) btn.classList.add('past');
-    if (j.today) btn.classList.add('today');
     btn.addEventListener('click', () => showJourneyCard(j.id, true));
     li.append(btn);
     ul.append(li);
