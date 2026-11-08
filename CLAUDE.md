@@ -79,7 +79,7 @@ The app finds two tables by their exact names, using a read-only database token 
 
 | Field | Meaning |
 |---|---|
-| `type` | train, ferry, sleeper, flight or car |
+| `type` | train, ferry, flight or car |
 | `location_start`, `location_end` | Station names, matching `station` in Places exactly |
 | `departure`, `arrival` | Local time at each station, text, four digits (HHMM) |
 | `num` | Train or flight number; may be empty |
@@ -91,7 +91,7 @@ If the arrival is not after the departure (after time zones are applied), it is 
 ## Map behaviour
 
 - Base map layers, bottom to top: land, relief (semi-transparent), sea, lakes, rivers (smaller ones appear as you zoom in), country borders. Then the journeys and stations. Panning is limited to the map area; zoom 3 to 11. If `map/` is missing, the plain background shows.
-- Journeys are solid lines, coloured by type: train `#40004b`, ferry `#00441b`, flight `#543005` (a gentle arc), car `#053061`, sleeper `#7F77DD`. All are straight except flights. Done journeys are grey; today's are thicker.
+- Journeys are solid lines, coloured by type: train `#40004b`, ferry `#00441b`, flight `#543005` (a gentle arc), car `#053061`. All are straight except flights. Done journeys are grey; today's are thicker.
 - Labels are drawn by the browser (no font files): place names when zoomed out, station names as well from zoom 9. Overlapping labels are hidden.
 - Tapping a station or a line opens a card. The journey list opens from the top bar.
 

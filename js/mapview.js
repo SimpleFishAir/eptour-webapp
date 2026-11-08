@@ -27,7 +27,6 @@ const mapUrl = file => new URL('map/' + file, document.baseURI).href;
 const COLOURS = {
   train: '#40004b',
   ferry: '#00441b',
-  sleeper: '#7F77DD',
   flight: '#543005',
   car: '#053061'
 };

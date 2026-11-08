@@ -4,7 +4,7 @@
 
 export const TRIP_YEAR = 2026;
 
-export const MODES = ['train', 'ferry', 'sleeper', 'flight', 'car'];
+export const MODES = ['train', 'ferry', 'flight', 'car'];
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
