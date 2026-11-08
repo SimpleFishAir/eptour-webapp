@@ -2,7 +2,23 @@ package: maplibre-gl
 version: 6.16.0
 archive_integrity: sha512-gApO66EMtoDZuio680RUBvskR7ahFd/NNhLN4tBAs+Y7FeT4gQV8zVFgYVMRmFxQznOEzecW19w6xOd9XjZjiA==
 library: maplibre-gl.mjs
+worker: maplibre-gl-worker.mjs
 style: maplibre-gl.css
 maplibre-gl.mjs sha256=fbbdf8ddd9a48e49059a4be6795a4f214a711314bb5809f72d3730b48e7897e3 sha384=sha384-uLwQnFL74rrONqIWx/ubL4wcAtA2h08tbMDZd9U4KbQ7GhaA7S1XKepHU89UkU7C bytes=1108049
+maplibre-gl-worker.mjs sha256=0bf06492bdb7ba3d4132b78e435621bfba60d5250967991c02b1a73affea8cd5 sha384=sha384-FgyfFzov+/WGwlmjlowNT14eHNk/fCYPBsD/J2FkqC+Pef7/36bn0gdsHaB/Oso/ bytes=519372
+maplibre-gl-shared.mjs sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 sha384=sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb bytes=0
 maplibre-gl.css sha256=a90798a1953017790e590f7e1bd35ff103a8a4263972cb47290b78adf86f8c20 sha384=sha384-S+OnE5M4U3Qc2nR0RgljGrVs06xqfRg8L7uFk/pOF5+sRuSDG4oKkqKZmFrx7w09 bytes=71596
 LICENSE-maplibre-gl.txt sha256=ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2 sha384=sha384-3Zf/f+K0L6bn+JFiUedpEU79XsEmWDOSzj/+j17JomfRWmlkO60ByjZbpgZkeRiL bytes=5984
+dist files in the package (names and sizes only; only the files above are kept):
+  dist/maplibre-gl-dev.mjs bytes=2490629
+  dist/maplibre-gl-dev.mjs.map bytes=5590855
+  dist/maplibre-gl-shared-dev.mjs bytes=0
+  dist/maplibre-gl-shared.mjs bytes=0
+  dist/maplibre-gl-worker-dev.mjs bytes=1201142
+  dist/maplibre-gl-worker-dev.mjs.map bytes=2883646
+  dist/maplibre-gl-worker.mjs bytes=519372
+  dist/maplibre-gl-worker.mjs.map bytes=2646715
+  dist/maplibre-gl.css bytes=71596
+  dist/maplibre-gl.d.ts bytes=756489
+  dist/maplibre-gl.mjs bytes=1108049
+  dist/maplibre-gl.mjs.map bytes=5583019
