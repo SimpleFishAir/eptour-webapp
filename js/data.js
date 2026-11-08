@@ -180,3 +180,15 @@ export function placeDays(journeys, stations) {
   }
   return new Map([...daysAt].map(([place, set]) => [place, set.size]));
 }
+
+// The station first arrived at in each place (by arrival time). For a place
+// with several stations, the day number is shown on this one only.
+// Returns a Map of place name to station name.
+export function firstArrivals(journeys, stations) {
+  const first = new Map();
+  for (const j of [...journeys].sort((x, y) => x.arrUtc - y.arrUtc)) {
+    const s = stations.get(j.to);
+    if (s && !first.has(s.place)) first.set(s.place, j.to);
+  }
+  return first;
+}

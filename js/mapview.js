@@ -5,6 +5,7 @@
 // station names as well when zoomed in.
 
 import * as ml from 'maplibre-gl';
+import { firstArrivals } from './data.js';
 const maplibregl = ml.default || ml;
 
 // The library's background worker sits next to it in vendor/. Tell the
@@ -387,14 +388,16 @@ export function createMap(container, handlers) {
       return { lngLat: [s.lon, s.lat], r: (daysAt(s) > 0 ? DOT_RADIUS : DOT_RADIUS_EMPTY) + DOT_RING };
     });
 
-    // Days at the place, in the centre of each of its station dots. Places
-    // with no stay keep an empty dot.
+    // Days at the place, in the centre of the dot of the station first
+    // arrived at. The place's other stations keep the big dot with no
+    // number; places with no stay keep the small, empty dot.
     numbers.forEach(m => m.remove());
     numbers = [];
+    const first = firstArrivals(journeys, stations);
     for (const name of used) {
       const s = stations.get(name);
       const n = days.get(s.place);
-      if (!n) continue;
+      if (!n || first.get(s.place) !== name) continue;
       const el = document.createElement('div');
       el.className = 'dot-num';
       el.textContent = String(n);
