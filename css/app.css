@@ -78,11 +78,13 @@ input { width: 100%; padding: 10px 12px; font-size: 16px; border: 1px solid var(
 
 /* map labels, drawn by the browser */
 .lbl {
-  pointer-events: none; white-space: nowrap; font-size: 12px; color: var(--fg);
+  pointer-events: none; white-space: nowrap; width: max-content; font-size: 12px; color: var(--fg);
   text-shadow: 0 0 2px var(--halo), 0 0 2px var(--halo), 0 0 3px var(--halo), 0 0 4px var(--halo);
 }
 .lbl-place { font-weight: 600; font-size: 13px; }
 .lbl-station { color: var(--muted); font-size: 11px; }
+.leaders { position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible; }
+.leaders line { stroke: #8a8983; stroke-width: 1; }
 .dot-num {
   pointer-events: none; color: #ffffff; font-size: 11px; font-weight: 700; line-height: 1;
   font-variant-numeric: tabular-nums;

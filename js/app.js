@@ -63,7 +63,9 @@ function showApp() {
     map = createMap($('map'), {
       onStation: showStationCard,
       onJourney: id => showJourneyCard(id, false),
-      onEmpty: closeCard
+      onEmpty: closeCard,
+      // names are kept below the top bar
+      topInset: () => document.querySelector('#app .bar').offsetHeight
     });
   }
 }

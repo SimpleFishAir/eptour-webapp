@@ -106,6 +106,13 @@ export function createMap(container, handlers) {
   const lineLayers = Object.keys(COLOURS).map(m => 'j-' + m);
   let labels = [];
   let numbers = [];
+  let dots = []; // every station dot, so names can keep clear of them
+
+  // Thin grey lines from moved names of places stayed back to their dots.
+  // Drawn under the labels, over the map.
+  const leaders = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  leaders.setAttribute('class', 'leaders');
+  (map.getCanvasContainer ? map.getCanvasContainer() : container).appendChild(leaders);
   let pendingData = null;
   let loaded = false;
   let stationsByName = new Map();
@@ -217,36 +224,111 @@ export function createMap(container, handlers) {
     handlers.onEmpty();
   });
 
+  // While the map moves, names keep their place relative to their dots;
+  // once it stops, the names of places stayed are arranged again.
   let frame = 0;
-  const scheduleLabels = () => {
+  let rearrange = false;
+  const scheduleLabels = again => {
+    rearrange = rearrange || again;
     if (frame) return;
-    frame = requestAnimationFrame(() => { frame = 0; layoutLabels(); });
+    frame = requestAnimationFrame(() => { frame = 0; const r = rearrange; rearrange = false; layoutLabels(r); });
   };
-  map.on('move', scheduleLabels);
-  map.on('moveend', scheduleLabels);
-  map.on('resize', scheduleLabels);
+  map.on('move', () => scheduleLabels(false));
+  map.on('moveend', () => scheduleLabels(true));
+  map.on('resize', () => scheduleLabels(true));
 
-  function layoutLabels() {
+  const overlaps = (a, b) => a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
+  const boxAt = (cx, cy, w, h) => ({ x1: cx - w / 2, x2: cx + w / 2, y1: cy - h / 2, y2: cy + h / 2 });
+  const padded = (b, p) => ({ x1: b.x1 - p, x2: b.x2 + p, y1: b.y1 - p, y2: b.y2 + p });
+  // Where to try a name that doesn't fit above its dot: rings of growing
+  // distance, starting straight up and working round.
+  const DIRS = [-90, -60, -120, -30, -150, 0, 180, 30, 150, 60, 120, 90].map(d => d * Math.PI / 180);
+  const RINGS = [24, 40, 60, 85, 115, 150];
+
+  function placeStay(l, pt, usual, free) {
+    if (free(boxAt(pt.x + usual[0], pt.y + usual[1], l.w, l.h))) return { offset: usual, moved: false };
+    for (const r of RINGS) {
+      for (const a of DIRS) {
+        const dx = Math.round(Math.cos(a) * (r + l.w / 2));
+        const dy = Math.round(Math.sin(a) * (r + l.h / 2));
+        if (free(boxAt(pt.x + dx, pt.y + dy, l.w, l.h))) return { offset: [dx, dy], moved: true };
+      }
+    }
+    return { offset: usual, moved: false }; // nowhere free: keep the usual spot
+  }
+
+  // A line from the edge of the dot to the nearest edge of its name.
+  function leader(pt, box, dotR) {
+    const qx = Math.min(Math.max(pt.x, box.x1), box.x2);
+    const qy = Math.min(Math.max(pt.y, box.y1), box.y2);
+    const d = Math.hypot(qx - pt.x, qy - pt.y);
+    if (d <= dotR) return null;
+    return [pt.x + (qx - pt.x) * dotR / d, pt.y + (qy - pt.y) * dotR / d, qx, qy];
+  }
+
+  function drawLeaders(segs, W, H) {
+    leaders.setAttribute('width', W);
+    leaders.setAttribute('height', H);
+    leaders.replaceChildren(...segs.map(([x1, y1, x2, y2]) => {
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1.toFixed(1));
+      line.setAttribute('y1', y1.toFixed(1));
+      line.setAttribute('x2', x2.toFixed(1));
+      line.setAttribute('y2', y2.toFixed(1));
+      return line;
+    }));
+  }
+
+  function layoutLabels(again) {
     const zoom = map.getZoom();
-    const placed = [];
     const W = container.clientWidth;
     const H = container.clientHeight;
+    const top = (handlers.topInset ? handlers.topInset() : 0) + 4;
+    const inView = b => b.x1 >= 4 && b.x2 <= W - 4 && b.y1 >= top && b.y2 <= H - 4;
+    const dotBoxes = dots.map(d => { const p = map.project(d.lngLat); return boxAt(p.x, p.y, d.r * 2, d.r * 2); });
+    const placed = [];
+    const segs = [];
+
+    // Names of places stayed: always shown. Above the dot if there's room,
+    // otherwise moved to the nearest free spot with a line back to the dot.
     for (const l of labels) {
+      if (l.kind !== 'stay') continue;
+      const pt = map.project(l.lngLat);
+      const usual = [0, -(l.gap + l.h / 2)];
+      const onScreen = pt.x >= 0 && pt.x <= W && pt.y >= 0 && pt.y <= H;
+      if (again || !l.spot) {
+        const free = b => inView(b) && !placed.some(p => overlaps(b, padded(p, 2))) && !dotBoxes.some(d => overlaps(b, d));
+        l.spot = onScreen ? placeStay(l, pt, usual, free) : { offset: usual, moved: false };
+        l.marker.setOffset(l.spot.offset);
+      }
+      l.el.style.display = '';
+      if (!onScreen) continue;
+      const box = boxAt(pt.x + l.spot.offset[0], pt.y + l.spot.offset[1], l.w, l.h);
+      placed.push(box);
+      if (l.spot.moved) {
+        const seg = leader(pt, box, DOT_RADIUS + DOT_RING);
+        if (seg) segs.push(seg);
+      }
+    }
+
+    // Other place names, then station names from STATION_ZOOM: shown only
+    // where they don't overlap a name already shown.
+    for (const l of labels) {
+      if (l.kind === 'stay') continue;
       const wanted = l.kind === 'place' || zoom >= STATION_ZOOM;
       let show = false;
       if (wanted) {
         const pt = map.project(l.lngLat);
-        const w = l.text.length * (l.kind === 'place' ? 7.5 : 6.5) + 6;
-        const h = 16;
         const box = l.kind === 'place'
-          ? { x1: pt.x - w / 2, x2: pt.x + w / 2, y1: pt.y - l.gap - h, y2: pt.y - l.gap }
-          : { x1: pt.x - w / 2, x2: pt.x + w / 2, y1: pt.y + l.gap, y2: pt.y + l.gap + h };
+          ? { x1: pt.x - l.w / 2, x2: pt.x + l.w / 2, y1: pt.y - l.gap - l.h, y2: pt.y - l.gap }
+          : { x1: pt.x - l.w / 2, x2: pt.x + l.w / 2, y1: pt.y + l.gap, y2: pt.y + l.gap + l.h };
         const onScreen = box.x2 > 0 && box.x1 < W && box.y2 > 0 && box.y1 < H;
-        const clash = placed.some(b => box.x1 < b.x2 && box.x2 > b.x1 && box.y1 < b.y2 && box.y2 > b.y1);
+        const clash = placed.some(b => overlaps(box, b));
         if (onScreen && !clash) { placed.push(box); show = true; }
       }
       l.el.style.display = show ? '' : 'none';
     }
+    drawLeaders(segs, W, H);
   }
 
   function apply(stations, journeys, days) {
@@ -285,16 +367,25 @@ export function createMap(container, handlers) {
       p.stations.push(s);
       if (s.type === 'city') p.city = true;
     }
-    const placeList = [...places.entries()].sort((x, y) => (y[1].city - x[1].city));
-    for (const [name, p] of placeList) {
-      const lon = p.stations.reduce((t, s) => t + s.lon, 0) / p.stations.length;
-      const lat = p.stations.reduce((t, s) => t + s.lat, 0) / p.stations.length;
-      addLabel('place', name, [lon, lat], daysAt(p.stations[0]) > 0);
+    const centre = p => [
+      p.stations.reduce((t, s) => t + s.lon, 0) / p.stations.length,
+      p.stations.reduce((t, s) => t + s.lat, 0) / p.stations.length
+    ];
+    // Places stayed first (in trip order), then the other places, then stations.
+    for (const [name, p] of places) {
+      if (daysAt(p.stations[0]) > 0) addLabel('stay', name, centre(p), true);
     }
+    const others = [...places.entries()].filter(([, p]) => !(daysAt(p.stations[0]) > 0))
+      .sort((x, y) => (y[1].city - x[1].city));
+    for (const [name, p] of others) addLabel('place', name, centre(p), false);
     for (const name of used) {
       const s = stations.get(name);
       addLabel('station', s.station, [s.lon, s.lat], daysAt(s) > 0);
     }
+    dots = [...used].map(name => {
+      const s = stations.get(name);
+      return { lngLat: [s.lon, s.lat], r: (daysAt(s) > 0 ? DOT_RADIUS : DOT_RADIUS_EMPTY) + DOT_RING };
+    });
 
     // Days at the place, in the centre of each of its station dots. Places
     // with no stay keep an empty dot.
@@ -309,18 +400,24 @@ export function createMap(container, handlers) {
       el.textContent = String(n);
       numbers.push(new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([s.lon, s.lat]).addTo(map));
     }
-    layoutLabels();
+    layoutLabels(true);
   }
 
+  // Names of places stayed ('stay') are placed by layoutLabels, centred on
+  // an offset from their dot; other place names sit above the dot and
+  // station names below it.
   function addLabel(kind, text, lngLat, bigDot) {
-    const el = labelEl(text, kind === 'place' ? 'lbl-place' : 'lbl-station');
-    const gap = (bigDot ? GAP_BIG : GAP_EMPTY)[kind];
-    const marker = new maplibregl.Marker({
-      element: el,
-      anchor: kind === 'place' ? 'bottom' : 'top',
-      offset: kind === 'place' ? [0, -gap] : [0, gap]
-    }).setLngLat(lngLat).addTo(map);
-    labels.push({ kind, text, lngLat, el, marker, gap });
+    const isPlace = kind !== 'station';
+    const el = labelEl(text, isPlace ? 'lbl-place' : 'lbl-station');
+    const gap = (bigDot ? GAP_BIG : GAP_EMPTY)[isPlace ? 'place' : 'station'];
+    const marker = new maplibregl.Marker(kind === 'stay'
+      ? { element: el, anchor: 'center', offset: [0, -gap] }
+      : { element: el, anchor: kind === 'place' ? 'bottom' : 'top', offset: kind === 'place' ? [0, -gap] : [0, gap] }
+    ).setLngLat(lngLat).addTo(map);
+    // Measure the name once, as drawn; fall back to an estimate.
+    const w = el.offsetWidth || text.length * (isPlace ? 7.5 : 6.5) + 6;
+    const h = el.offsetHeight || 16;
+    labels.push({ kind, text, lngLat, el, marker, gap, w, h, spot: null });
   }
 
   function fit(points, bottomPad) {
