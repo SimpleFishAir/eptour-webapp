@@ -5,6 +5,14 @@
 import * as ml from 'maplibre-gl';
 const maplibregl = ml.default || ml;
 
+// The library's background worker sits next to it in vendor/. Tell the
+// library where it is, if it offers that setting; otherwise it finds it itself.
+try {
+  if (typeof maplibregl.setWorkerUrl === 'function') {
+    maplibregl.setWorkerUrl(new URL('../vendor/maplibre-gl-worker.mjs', import.meta.url).href);
+  }
+} catch (e) { /* leave the library's own choice in place */ }
+
 const STATION_ZOOM = 9;
 
 const COLOURS = {

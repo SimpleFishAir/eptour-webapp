@@ -1,6 +1,7 @@
 # Fetches the MapLibre map library from the official npm registry,
 # checks it against the registry's published fingerprint, and commits
-# the browser library, its style file, the licence and a fingerprint
+# the browser library, its background worker (and shared file, if the
+# package has one), its style file, the licence and a fingerprint
 # record to vendor/ on the vendor-maplibre branch (never dev or main).
 # File locations are read from the package's own package.json.
 # The fingerprint record also lists the names and sizes of the files in
@@ -113,7 +114,28 @@ jobs:
 
           JS_NAME="$(basename "$JS_PATH")"
           CSS_NAME="$(basename "$CSS_PATH")"
+          JS_DIR="$(dirname "$JS_PATH")"
+          JS_BASE="${JS_NAME%.*}"
+          JS_EXT="${JS_NAME##*.}"
+
+          # The library's background worker (required: the map's lines and
+          # dots are prepared there) and its shared file (kept if present).
+          WORKER_NAME="${JS_BASE}-worker.${JS_EXT}"
+          SHARED_NAME="${JS_BASE}-shared.${JS_EXT}"
+          [[ "$WORKER_NAME" =~ ^[A-Za-z0-9._-]+\.(js|mjs)$ ]] || fail "worker name failed the safety check"
+          [[ "$SHARED_NAME" =~ ^[A-Za-z0-9._-]+\.(js|mjs)$ ]] || fail "shared file name failed the safety check"
+          tar -xzf "$TARBALL" "package/$JS_DIR/$WORKER_NAME" >/dev/null 2>&1 || fail "worker file not found in the package"
+          KEEP=("$JS_NAME" "$WORKER_NAME")
+          if tar -xzf "$TARBALL" "package/$JS_DIR/$SHARED_NAME" >/dev/null 2>&1; then
+            KEEP+=("$SHARED_NAME")
+          fi
+          KEEP+=("$CSS_NAME" LICENSE-maplibre-gl.txt)
+
           cp "package/$JS_PATH" "$OUT/$JS_NAME" || fail "could not copy the library"
+          cp "package/$JS_DIR/$WORKER_NAME" "$OUT/$WORKER_NAME" || fail "could not copy the worker"
+          if [ -f "package/$JS_DIR/$SHARED_NAME" ]; then
+            cp "package/$JS_DIR/$SHARED_NAME" "$OUT/$SHARED_NAME" || fail "could not copy the shared file"
+          fi
           cp "package/$CSS_PATH" "$OUT/$CSS_NAME" || fail "could not copy the style file"
           cp "$LICENCE_FILE" "$OUT/LICENSE-maplibre-gl.txt" || fail "could not copy the licence"
           cd "$OUT"
@@ -123,8 +145,9 @@ jobs:
             echo "version: ${VERSION}"
             echo "archive_integrity: ${INTEGRITY}"
             echo "library: ${JS_NAME}"
+            echo "worker: ${WORKER_NAME}"
             echo "style: ${CSS_NAME}"
-            for f in "$JS_NAME" "$CSS_NAME" LICENSE-maplibre-gl.txt; do
+            for f in "${KEEP[@]}"; do
               echo "${f} sha256=$(sha256sum "$f" | cut -d' ' -f1) sha384=sha384-$(openssl dgst -sha384 -binary "$f" | base64 -w0) bytes=$(stat -c %s "$f")"
             done
             echo "dist files in the package (names and sizes only; only the files above are kept):"
@@ -137,6 +160,7 @@ jobs:
           echo "Version: ${VERSION}"
           echo "Archive fingerprint matches the registry: ${INTEGRITY}"
           echo "Library: ${JS_NAME}"
+          echo "Worker: ${WORKER_NAME}"
           echo "Style: ${CSS_NAME}"
           grep ' sha256=' CHECKSUMS-maplibre-gl.txt
 
@@ -155,7 +179,7 @@ jobs:
 
           git switch -q -C "$BRANCH" || fail "could not start the branch"
           mkdir -p vendor
-          rm -f vendor/maplibre-gl.* vendor/LICENSE-maplibre-gl.txt vendor/CHECKSUMS-maplibre-gl.txt
+          rm -f vendor/maplibre-gl* vendor/LICENSE-maplibre-gl.txt vendor/CHECKSUMS-maplibre-gl.txt
           cp "$RUNNER_TEMP/out/"* vendor/ || fail "could not place the files in vendor/"
           git add vendor || fail "could not stage the files"
 

@@ -39,6 +39,7 @@ Do not run commands that make git fetch missing files, such as `git cat-file` on
 
 - Plain HTML, CSS and JavaScript (ES modules). No framework, no build step.
 - MapLibre GL JS, stored in `vendor/` and loaded through an import map with an integrity check. The stylesheet also has an integrity check. If MapLibre is updated, update both fingerprints in `index.html` (from `vendor/CHECKSUMS-maplibre-gl.txt`) and the import map hash in the security policy.
+- MapLibre's background worker, `vendor/maplibre-gl-worker.mjs`, prepares the map's lines and dots. The library loads it itself (`js/mapview.js` points it there if the library offers that setting). Browsers can't check a worker's fingerprint, so it is recorded in `vendor/CHECKSUMS-maplibre-gl.txt` instead. `vendor/maplibre-gl-shared.mjs` is an empty file from the package, kept in case the worker asks for it.
 - A strict Content Security Policy in `index.html`: scripts only from this site, network requests only to this site and `https://api.baserow.io`.
 - All text from Baserow is shown with `textContent`, never as page code.
 
@@ -51,8 +52,8 @@ Do not run commands that make git fetch missing files, such as `git cat-file` on
 - `js/data.js`: parsing and checking rows, time zones, formatting
 - `js/mapview.js`: MapLibre map, lines by type, labels
 - `baserow-check.html`: access check page
-- `.github/workflows/vendor-maplibre.yml`: fetches MapLibre from npm, checks its fingerprint and commits it to the `vendor-maplibre` branch only. Started by hand.
-- `vendor/`: MapLibre (do not open)
+- `.github/workflows/vendor-maplibre.yml`: fetches MapLibre from npm, checks its fingerprint, keeps the library, its worker (and shared file, if present), style file and licence, records their fingerprints and the names and sizes of the package's `dist/` files, and commits to the `vendor-maplibre` branch only. Started by hand.
+- `vendor/`: MapLibre library, worker, shared file, style and licence (do not open), plus `CHECKSUMS-maplibre-gl.txt` (may be read)
 
 ## Data model (Baserow)
 
