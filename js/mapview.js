@@ -40,6 +40,7 @@ const LINE_OPACITY = 0.6;
 const DOT_RADIUS = 9;
 const DOT_RADIUS_EMPTY = 4.5;
 const DOT_RING = 2;
+const DOT_OPACITY = 0.6; // centre and ring, 60% solid like the lines
 const GAP_BIG = { place: DOT_RADIUS + DOT_RING + 2, station: DOT_RADIUS + DOT_RING + 2 };
 const GAP_EMPTY = { place: 8, station: 7 };
 
@@ -196,8 +197,10 @@ export function createMap(container, handlers) {
       paint: {
         'circle-radius': ['case', ['>', ['get', 'days'], 0], DOT_RADIUS, DOT_RADIUS_EMPTY],
         'circle-color': colours.dot,
+        'circle-opacity': DOT_OPACITY,
         'circle-stroke-width': DOT_RING,
-        'circle-stroke-color': colours.ring
+        'circle-stroke-color': colours.ring,
+        'circle-stroke-opacity': DOT_OPACITY
       }
     });
     loaded = true;

@@ -161,16 +161,22 @@ export function parseJourneys(rows, stations) {
 // every calendar day, including the arrival and departure days: arriving
 // 17 Oct and leaving 20 Oct is 4 days. Changes on the same day, and the
 // trip's first departure and last arrival, are not stays. Repeat visits to
-// a place add up. Returns a Map of place name to days.
+// a place add up, but each calendar day is counted once: leaving for a day
+// trip and coming back the same day doesn't count that day twice (Basel
+// 24 to 26 Oct with a day trip to Zurich on 25 Oct is 3 days, not 4).
+// Returns a Map of place name to days.
 export function placeDays(journeys, stations) {
-  const days = new Map();
+  const daysAt = new Map();
   for (let i = 0; i + 1 < journeys.length; i++) {
     const a = stations.get(journeys[i].to);
     const b = stations.get(journeys[i + 1].from);
     if (!a || !b || a.place !== b.place) continue;
     const arrived = localDayNumber(journeys[i].arrUtc, a.tz);
     const left = localDayNumber(journeys[i + 1].depUtc, b.tz);
-    if (left > arrived) days.set(a.place, (days.get(a.place) || 0) + left - arrived + 1);
+    if (left <= arrived) continue;
+    if (!daysAt.has(a.place)) daysAt.set(a.place, new Set());
+    const set = daysAt.get(a.place);
+    for (let d = arrived; d <= left; d++) set.add(d);
   }
-  return days;
+  return new Map([...daysAt].map(([place, set]) => [place, set.size]));
 }
