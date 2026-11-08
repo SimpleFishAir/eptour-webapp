@@ -17,7 +17,7 @@ A private, phone-first web app showing a trip's journeys on an interactive map o
 | Map library | MapLibre GL JS, stored in the repo | Open source, no account, key or tracking |
 | Map background | Flat map from Natural Earth with its relief shading, self-hosted | Shows mountains without elevation data; nothing goes to a map provider |
 | Route lines | Straight lines between start and end, styled by type | Simplest; approximate railway routes kept as a later option |
-| Outside data | Downloaded and processed only in GitHub Actions | Keeps data that could carry prompt injection away from Claude |
+| Outside data | Downloaded, processed and checked only in GitHub Actions; only a fixed-format manifest is read | Keeps data that could carry prompt injection away from Claude |
 | Workflow | `dev` is the default branch and is published by Pages | Changes are tested on the live page before anything else |
 
 ## Requirements
@@ -33,8 +33,8 @@ A private, phone-first web app showing a trip's journeys on an interactive map o
 |---|---|---|
 | 1 | Access check page | Done |
 | 2 | Places and Journey tables in Baserow | Done |
-| 3 | The app: journeys as straight lines on a plain background, place and station names, tap cards, journey list, token setup with automatic table lookup | In progress |
-| 4 | Base map: GitHub Action, output checking script, flat Natural Earth map with relief shading | |
+| 3 | The app: journeys as straight lines on a plain background, place and station names, tap cards, journey list, token setup with automatic table lookup | Done |
+| 4 | Base map: GitHub Action, output checking script, flat Natural Earth map with relief shading | In progress |
 | 5 | "Next up" and checks panel | |
 | 6 | Caching and offline use | |
 | 7 | Replay, stats and polish | Optional |

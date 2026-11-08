@@ -1,6 +1,7 @@
-// The map: journeys as straight lines styled by type (flights as a gentle
-// arc), stations as dots, and labels drawn by the browser: place names
-// when zoomed out, station names as well when zoomed in.
+// The map: a flat base map of Europe (Natural Earth shapes and relief
+// shading from map/, if present), journeys as straight lines styled by type
+// (flights as a gentle arc), stations as dots, and labels drawn by the
+// browser: place names when zoomed out, station names as well when zoomed in.
 
 import * as ml from 'maplibre-gl';
 const maplibregl = ml.default || ml;
@@ -14,6 +15,13 @@ try {
 } catch (e) { /* leave the library's own choice in place */ }
 
 const STATION_ZOOM = 9;
+
+// Map area: west, south, east, north. Must match tools/build_basemap.py
+// and tools/check_basemap.py.
+const AREA = [-12, 34, 45, 72];
+const RELIEF_FILE = /^relief-\d-\d\.jpg$/;
+
+const mapUrl = file => new URL('map/' + file, document.baseURI).href;
 
 const COLOURS = {
   train: '#1D9E75',
@@ -31,8 +39,22 @@ const DASHES = {
 function palette() {
   const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   return dark
-    ? { bg: '#1f2023', dot: '#ecebe6', ring: '#1f2023', past: '#6b6b66' }
-    : { bg: '#eef1f0', dot: '#2c2c2a', ring: '#ffffff', past: '#a9a8a2' };
+    ? {
+        bg: '#1f2023', dot: '#ecebe6', ring: '#1f2023', past: '#6b6b66',
+        land: '#2c2d2a', sea: '#17222d', river: '#2c4a63', border: '#5d5b55',
+        reliefOpacity: 0.5, reliefMax: 0.45
+      }
+    : {
+        bg: '#eef1f0', dot: '#2c2c2a', ring: '#ffffff', past: '#a9a8a2',
+        land: '#f3f0e8', sea: '#cddff0', river: '#9fc4e0', border: '#a8a39a',
+        reliefOpacity: 0.45, reliefMax: 1
+      };
+}
+
+function isCorners(c) {
+  return Array.isArray(c) && c.length === 4 && c.every(p =>
+    Array.isArray(p) && p.length === 2 && p.every(v => typeof v === 'number' && Number.isFinite(v)) &&
+    p[0] >= AREA[0] && p[0] <= AREA[2] && p[1] >= AREA[1] && p[1] <= AREA[3]);
 }
 
 // A gentle curve between two points, for flights.
@@ -70,6 +92,10 @@ export function createMap(container, handlers) {
     },
     center: [15, 54],
     zoom: 3.5,
+    minZoom: 3,
+    maxZoom: 11,
+    maxBounds: [[AREA[0], AREA[1]], [AREA[2], AREA[3]]],
+    renderWorldCopies: false,
     attributionControl: false,
     dragRotate: false,
     pitchWithRotate: false,
@@ -85,7 +111,70 @@ export function createMap(container, handlers) {
   let stationsByName = new Map();
   let journeysById = new Map();
 
+  // Base map layers go first, so they sit under the journeys. If the files
+  // aren't there, these layers stay empty and the plain background shows.
+  function addBaseMap() {
+    const shapes = (id, file) => map.addSource(id, { type: 'geojson', data: mapUrl(file), maxzoom: 10 });
+    shapes('map-land', 'land.json');
+    shapes('map-ocean', 'ocean.json');
+    shapes('map-lakes', 'lakes.json');
+    shapes('map-rivers', 'rivers.json');
+    shapes('map-borders', 'borders.json');
+    map.addLayer({ id: 'map-land', type: 'fill', source: 'map-land', paint: { 'fill-color': colours.land } });
+    // relief pieces are added here, under the sea, once index.json has loaded
+    map.addLayer({ id: 'map-ocean', type: 'fill', source: 'map-ocean', paint: { 'fill-color': colours.sea } });
+    map.addLayer({ id: 'map-lakes', type: 'fill', source: 'map-lakes', paint: { 'fill-color': colours.sea } });
+    map.addLayer({
+      id: 'map-rivers',
+      type: 'line',
+      source: 'map-rivers',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-color': colours.river,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 3, 0.5, 8, 1.2, 11, 2],
+        // larger rivers first; smaller ones appear as you zoom in
+        'line-opacity': ['step', ['zoom'],
+          ['case', ['<=', ['get', 'r'], 4], 1, 0],
+          5, ['case', ['<=', ['get', 'r'], 6], 1, 0],
+          7, 1]
+      }
+    });
+    map.addLayer({
+      id: 'map-borders',
+      type: 'line',
+      source: 'map-borders',
+      layout: { 'line-join': 'round' },
+      paint: {
+        'line-color': colours.border,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 3, 0.6, 8, 1.2]
+      }
+    });
+
+    fetch(mapUrl('index.json'))
+      .then(r => (r.ok ? r.json() : null))
+      .then(index => {
+        if (!index || !Array.isArray(index.relief)) return;
+        index.relief.forEach((piece, i) => {
+          if (!piece || typeof piece.file !== 'string' || !RELIEF_FILE.test(piece.file) || !isCorners(piece.coordinates)) return;
+          const id = 'relief-' + i;
+          map.addSource(id, { type: 'image', url: mapUrl(piece.file), coordinates: piece.coordinates });
+          map.addLayer({
+            id,
+            type: 'raster',
+            source: id,
+            paint: {
+              'raster-opacity': colours.reliefOpacity,
+              'raster-brightness-max': colours.reliefMax,
+              'raster-fade-duration': 0
+            }
+          }, 'map-ocean');
+        });
+      })
+      .catch(() => { /* no relief: the map still works without it */ });
+  }
+
   map.on('load', () => {
+    addBaseMap();
     map.addSource('journeys', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
     map.addSource('stations', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
     for (const mode of Object.keys(COLOURS)) {
