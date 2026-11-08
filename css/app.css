@@ -83,4 +83,8 @@ input { width: 100%; padding: 10px 12px; font-size: 16px; border: 1px solid var(
 }
 .lbl-place { font-weight: 600; font-size: 13px; }
 .lbl-station { color: var(--muted); font-size: 11px; }
+.dot-num {
+  pointer-events: none; color: #ffffff; font-size: 11px; font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
 .maplibregl-ctrl-bottom-right { bottom: env(safe-area-inset-bottom); }

@@ -2,7 +2,7 @@
 // All text from Baserow is shown with textContent, never as page code.
 
 import { findTables, listRows, BaserowError } from './baserow.js';
-import { parsePlaces, parseJourneys, fmtDate, fmtTime, fmtDuration } from './data.js';
+import { parsePlaces, parseJourneys, placeDays, fmtDate, fmtTime, fmtDuration } from './data.js';
 import { createMap } from './mapview.js';
 
 const KEY_TOKEN = 'eptour.token';
@@ -122,7 +122,7 @@ async function load() {
     const j = parseJourneys(journeyRows, p.stations);
     stations = p.stations;
     journeys = j.journeys;
-    map.setData(stations, journeys);
+    map.setData(stations, journeys, placeDays(journeys, stations));
     renderList();
     const problems = [...p.problems, ...j.problems];
     if (problems.length) showNotice(problems); else hideNotice();

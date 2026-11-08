@@ -1,7 +1,8 @@
 // The map: a flat base map of Europe (Natural Earth shapes and relief
-// shading from map/, if present), journeys as straight lines styled by type
-// (flights as a gentle arc), stations as dots, and labels drawn by the
-// browser: place names when zoomed out, station names as well when zoomed in.
+// shading from map/, if present), journeys as straight lines coloured by
+// type (flights as a gentle arc), stations as dots showing the days at their
+// place, and labels drawn by the browser: place names when zoomed out,
+// station names as well when zoomed in.
 
 import * as ml from 'maplibre-gl';
 const maplibregl = ml.default || ml;
@@ -23,13 +24,20 @@ const RELIEF_FILE = /^relief-\d-\d\.jpg$/;
 
 const mapUrl = file => new URL('map/' + file, document.baseURI).href;
 
-// All journeys are solid lines, coloured by type.
+// All journeys are solid lines, coloured by type, 60% solid.
 const COLOURS = {
-  train: '#40004b',
-  ferry: '#00441b',
-  flight: '#543005',
-  car: '#053061'
+  train: '#762a83',
+  ferry: '#1b7837',
+  flight: '#8c510a',
+  car: '#74add1'
 };
+const LINE_WIDTH = 5;
+const LINE_OPACITY = 0.6;
+
+// Station dots, with the days at their place in the centre.
+const DOT_RADIUS = 9;
+const DOT_RING = 2;
+const LABEL_GAP = DOT_RADIUS + DOT_RING + 2; // labels sit clear of the dot
 
 const MAP_COLOURS = {
   bg: '#eef1f0', dot: '#2c2c2a', ring: '#ffffff',
@@ -92,6 +100,7 @@ export function createMap(container, handlers) {
 
   const lineLayers = Object.keys(COLOURS).map(m => 'j-' + m);
   let labels = [];
+  let numbers = [];
   let pendingData = null;
   let loaded = false;
   let stationsByName = new Map();
@@ -171,7 +180,8 @@ export function createMap(container, handlers) {
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
           'line-color': COLOURS[mode],
-          'line-width': 2.5
+          'line-width': LINE_WIDTH,
+          'line-opacity': LINE_OPACITY
         }
       });
     }
@@ -180,14 +190,14 @@ export function createMap(container, handlers) {
       type: 'circle',
       source: 'stations',
       paint: {
-        'circle-radius': 4.5,
+        'circle-radius': DOT_RADIUS,
         'circle-color': colours.dot,
-        'circle-stroke-width': 2,
+        'circle-stroke-width': DOT_RING,
         'circle-stroke-color': colours.ring
       }
     });
     loaded = true;
-    if (pendingData) { const d = pendingData; pendingData = null; apply(d.stations, d.journeys); }
+    if (pendingData) { const d = pendingData; pendingData = null; apply(d.stations, d.journeys, d.days); }
   });
 
   map.on('click', e => {
@@ -222,8 +232,8 @@ export function createMap(container, handlers) {
         const w = l.text.length * (l.kind === 'place' ? 7.5 : 6.5) + 6;
         const h = 16;
         const box = l.kind === 'place'
-          ? { x1: pt.x - w / 2, x2: pt.x + w / 2, y1: pt.y - 8 - h, y2: pt.y - 8 }
-          : { x1: pt.x - w / 2, x2: pt.x + w / 2, y1: pt.y + 7, y2: pt.y + 7 + h };
+          ? { x1: pt.x - w / 2, x2: pt.x + w / 2, y1: pt.y - LABEL_GAP - h, y2: pt.y - LABEL_GAP }
+          : { x1: pt.x - w / 2, x2: pt.x + w / 2, y1: pt.y + LABEL_GAP, y2: pt.y + LABEL_GAP + h };
         const onScreen = box.x2 > 0 && box.x1 < W && box.y2 > 0 && box.y1 < H;
         const clash = placed.some(b => box.x1 < b.x2 && box.x2 > b.x1 && box.y1 < b.y2 && box.y2 > b.y1);
         if (onScreen && !clash) { placed.push(box); show = true; }
@@ -232,7 +242,7 @@ export function createMap(container, handlers) {
     }
   }
 
-  function apply(stations, journeys) {
+  function apply(stations, journeys, days) {
     stationsByName = stations;
     journeysById = new Map(journeys.map(j => [j.id, j]));
 
@@ -277,6 +287,20 @@ export function createMap(container, handlers) {
       const s = stations.get(name);
       addLabel('station', s.station, [s.lon, s.lat]);
     }
+
+    // Days at the place, in the centre of each of its station dots. Places
+    // with no stay keep an empty dot.
+    numbers.forEach(m => m.remove());
+    numbers = [];
+    for (const name of used) {
+      const s = stations.get(name);
+      const n = days.get(s.place);
+      if (!n) continue;
+      const el = document.createElement('div');
+      el.className = 'dot-num';
+      el.textContent = String(n);
+      numbers.push(new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([s.lon, s.lat]).addTo(map));
+    }
     layoutLabels();
   }
 
@@ -285,7 +309,7 @@ export function createMap(container, handlers) {
     const marker = new maplibregl.Marker({
       element: el,
       anchor: kind === 'place' ? 'bottom' : 'top',
-      offset: kind === 'place' ? [0, -8] : [0, 7]
+      offset: kind === 'place' ? [0, -LABEL_GAP] : [0, LABEL_GAP]
     }).setLngLat(lngLat).addTo(map);
     labels.push({ kind, text, lngLat, el, marker });
   }
@@ -302,9 +326,9 @@ export function createMap(container, handlers) {
   }
 
   return {
-    setData(stations, journeys) {
-      if (loaded) apply(stations, journeys);
-      else pendingData = { stations, journeys };
+    setData(stations, journeys, days = new Map()) {
+      if (loaded) apply(stations, journeys, days);
+      else pendingData = { stations, journeys, days };
     },
     showAll() {
       const pts = [];

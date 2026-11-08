@@ -91,7 +91,8 @@ If the arrival is not after the departure (after time zones are applied), it is 
 ## Map behaviour
 
 - Base map layers, bottom to top: land, relief (semi-transparent), sea, lakes, rivers (smaller ones appear as you zoom in), country borders. Then the journeys and stations. Panning is limited to the map area; zoom 3 to 11. If `map/` is missing, the plain background shows.
-- Journeys are solid lines, coloured by type: train `#40004b`, ferry `#00441b`, flight `#543005` (a gentle arc), car `#053061`. All are straight except flights, and all are the same width. Every journey always shows its own colour: there is no greying of finished journeys and no highlighting of today's.
+- Journeys are solid lines, coloured by type: train `#762a83`, ferry `#1b7837`, flight `#8c510a` (a gentle arc), car `#74add1`. All are straight except flights, all are 5 pixels wide and 60% solid (opacity 0.6). Every journey always shows its own colour: there is no greying of finished journeys and no highlighting of today's.
+- Station dots (radius 9) show the number of days at their place in the centre, worked out from the Journey table by `placeDays` in `js/data.js`: an arrival followed by the next departure from the same place on a later calendar day counts every calendar day, including both ends (arrive 17 Oct, leave 20 Oct = 4). Repeat visits add up. Every station of a place shows the same number. Same-day changes and the trip's start and end leave the dot empty.
 - Labels are drawn by the browser (no font files): place names when zoomed out, station names as well from zoom 9. Overlapping labels are hidden.
 - Tapping a station or a line opens a card. The journey list opens from the top bar.
 

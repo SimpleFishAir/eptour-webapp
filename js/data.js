@@ -41,6 +41,12 @@ function localParts(utcMs, tz) {
   return parts;
 }
 
+// Calendar day number (days since 1 Jan 1970) of a moment, in a time zone.
+function localDayNumber(utcMs, tz) {
+  const p = localParts(utcMs, tz);
+  return Math.round(Date.UTC(+p.year, +p.month - 1, +p.day) / 86400000);
+}
+
 function offsetMs(utcMs, tz) {
   const p = localParts(utcMs, tz);
   const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
@@ -147,4 +153,24 @@ export function parseJourneys(rows, stations) {
   });
   journeys.sort((x, y) => x.depUtc - y.depUtc);
   return { journeys, problems };
+}
+
+// Days at each place, worked out from the journeys (sorted by departure).
+// A stay is an arrival at a place followed by the next journey leaving the
+// same place (from any of its stations) on a later calendar day. It counts
+// every calendar day, including the arrival and departure days: arriving
+// 17 Oct and leaving 20 Oct is 4 days. Changes on the same day, and the
+// trip's first departure and last arrival, are not stays. Repeat visits to
+// a place add up. Returns a Map of place name to days.
+export function placeDays(journeys, stations) {
+  const days = new Map();
+  for (let i = 0; i + 1 < journeys.length; i++) {
+    const a = stations.get(journeys[i].to);
+    const b = stations.get(journeys[i + 1].from);
+    if (!a || !b || a.place !== b.place) continue;
+    const arrived = localDayNumber(journeys[i].arrUtc, a.tz);
+    const left = localDayNumber(journeys[i + 1].depUtc, b.tz);
+    if (left > arrived) days.set(a.place, (days.get(a.place) || 0) + left - arrived + 1);
+  }
+  return days;
 }
