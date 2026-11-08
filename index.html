@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ASoYJBRWpo920yIrIwhFgKKPJapl0LlFVzOS9V31oC8='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.baserow.io; worker-src 'self' blob:; child-src 'self' blob:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>eptour</title>
+<link rel="stylesheet" href="vendor/maplibre-gl.css" integrity="sha384-S+OnE5M4U3Qc2nR0RgljGrVs06xqfRg8L7uFk/pOF5+sRuSDG4oKkqKZmFrx7w09">
+<link rel="stylesheet" href="css/app.css">
+<script type="importmap">{"imports":{"maplibre-gl":"./vendor/maplibre-gl.mjs"},"integrity":{"./vendor/maplibre-gl.mjs":"sha384-uLwQnFL74rrONqIWx/ubL4wcAtA2h08tbMDZd9U4KbQ7GhaA7S1XKepHU89UkU7C"}}</script>
+<link rel="modulepreload" href="vendor/maplibre-gl.mjs" integrity="sha384-uLwQnFL74rrONqIWx/ubL4wcAtA2h08tbMDZd9U4KbQ7GhaA7S1XKepHU89UkU7C">
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+
+<div id="setup" class="screen" hidden>
+  <div class="setup-card">
+    <h1>eptour</h1>
+    <p class="hint">Paste your read-only Baserow token. It is saved on this device only, and sent only to Baserow.</p>
+    <form id="setup-form" autocomplete="off">
+      <label for="token-input">Read-only database token</label>
+      <input id="token-input" type="password" autocomplete="off" spellcheck="false" autocapitalize="off">
+      <div id="ids-fallback" hidden>
+        <p class="hint">Enter the table IDs: the number after /table/ in each table's web address in Baserow.</p>
+        <label for="places-id">Places table ID</label>
+        <input id="places-id" inputmode="numeric">
+        <label for="journey-id">Journey table ID</label>
+        <input id="journey-id" inputmode="numeric">
+      </div>
+      <button id="setup-save" type="submit" class="primary">Save and load</button>
+    </form>
+    <p id="setup-msg" class="msg" role="status" aria-live="polite"></p>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <div id="map"></div>
+  <header class="bar">
+    <span class="title">eptour</span>
+    <span id="updated" class="updated"></span>
+    <button id="btn-list" type="button">Journeys</button>
+    <button id="btn-menu" type="button" aria-label="Menu" aria-expanded="false">Menu</button>
+    <div id="menu" class="menu" hidden>
+      <button id="btn-showall" type="button">Show whole trip</button>
+      <button id="btn-refresh" type="button">Refresh</button>
+      <button id="btn-forget" type="button">Forget token</button>
+    </div>
+  </header>
+  <div id="notice" class="notice" role="status" hidden>
+    <div id="notice-text"></div>
+    <button id="notice-close" type="button" aria-label="Dismiss">Dismiss</button>
+  </div>
+  <section id="card" class="sheet" aria-live="polite" hidden>
+    <button id="card-close" class="close" type="button">Close</button>
+    <div id="card-body"></div>
+  </section>
+  <section id="list" class="sheet" hidden>
+    <div class="sheet-head">
+      <h2>Journeys</h2>
+      <button id="list-close" class="close" type="button">Close</button>
+    </div>
+    <div id="list-body"></div>
+  </section>
+</div>
+
+<div id="loading" class="loading" role="status" hidden>Loading your trip…</div>
+
+</body>
+</html>
